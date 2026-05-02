@@ -1,0 +1,9 @@
+.env
+*.db
+__pycache__/
+*.pyc
+logs/
+output/send_log.csv
+output/replies/
+duplicates_report.csv
+data/
