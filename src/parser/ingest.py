@@ -5,14 +5,10 @@ Run directly to print extraction statistics.
 
 import logging
 import os
-import sys
 from pathlib import Path
 from typing import Iterator
 
-from parse_emails import parse_email_file
-
-MAILDIR_ROOT = Path(__file__).parents[2] / "data" / "maildir"
-SELECTED_MAILBOXES = ["guzman-m", "lay-k", "hain-m", "blair-l", "neal-s"]
+from src.parser.parse_emails import parse_email_file
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -31,9 +27,9 @@ def iter_email_files(maildir_root: Path, mailboxes: list[str]) -> Iterator[Path]
 
 
 def run_ingestion(
-    maildir_root: Path = MAILDIR_ROOT,
-    mailboxes: list[str] = SELECTED_MAILBOXES,
-    error_log_path: Path | None = None,
+    maildir_root: Path,
+    mailboxes: list[str],
+    error_log_path: Path,
 ) -> tuple[list[dict], list[dict]]:
     """
     Parse all emails in selected mailboxes.
@@ -42,8 +38,6 @@ def run_ingestion(
         records   — list of successfully parsed email dicts
         failures  — list of {file, reason} dicts
     """
-    if error_log_path is None:
-        error_log_path = Path(__file__).parents[2] / "logs" / "error_log.txt"
     error_log_path.parent.mkdir(parents=True, exist_ok=True)
 
     records:  list[dict] = []
@@ -95,7 +89,3 @@ def _print_stats(records: list[dict], failures: list[dict], total: int) -> None:
         print(f"  {field:<22}: {present:>6} / {parsed}  ({100*present/parsed:.1f}%)")
     print(f"{'─'*50}\n")
 
-
-if __name__ == "__main__":
-    records, failures = run_ingestion()
-    sys.exit(0 if not failures else 1)

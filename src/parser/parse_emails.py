@@ -19,8 +19,10 @@ _TZ_OFFSETS = {
     "PST": -28800, "PDT": -25200,
     "MST": -25200, "MDT": -21600,
     "CST": -21600, "CDT": -18000,
-    "EST": -18200, "EDT": -14400,
+    "EST": -18000, "EDT": -14400,
 }
+
+_NUMERIC_OFFSET_RE = re.compile(r"[+-]\d{4}")
 
 _QUOTE_RE = re.compile(r"^>+.*$", re.MULTILINE)
 _FWD_RE   = re.compile(
@@ -42,13 +44,16 @@ def _normalize_subject(subject: str) -> str:
 def _parse_date(date_str: str) -> Optional[datetime]:
     if not date_str:
         return None
-    # Patch unknown tz abbreviations before handing off to stdlib
-    for abbr, offset_sec in _TZ_OFFSETS.items():
-        if abbr in date_str:
-            sign = "+" if offset_sec >= 0 else "-"
-            h, m = divmod(abs(offset_sec) // 60, 60)
-            date_str = date_str.replace(f"({abbr})", "").replace(abbr, f"{sign}{h:02d}{m:02d}")
-            break
+    # Only patch abbreviations when there is no numeric offset already present.
+    # A header like "14:00:00 -0800 (PST)" already has -0800; replacing PST too
+    # would corrupt the string.
+    if not _NUMERIC_OFFSET_RE.search(date_str):
+        for abbr, offset_sec in _TZ_OFFSETS.items():
+            if abbr in date_str:
+                sign = "+" if offset_sec >= 0 else "-"
+                h, m = divmod(abs(offset_sec) // 60, 60)
+                date_str = date_str.replace(abbr, f"{sign}{h:02d}{m:02d}").strip()
+                break
     try:
         dt = parsedate_to_datetime(date_str)
         return dt.astimezone(timezone.utc)
