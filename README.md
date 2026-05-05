@@ -61,10 +61,20 @@ maildir/ ──▶ parser/ ──▶ db/ ──▶ dedupe/ ──▶ notify/
              fields        SQLite  duplicates  via MCP
 ```
 
+![Pipeline Architecture](asset/diagram.png)
+
 1. **Parse** — recursively traverse `data/maildir/`, extract mandatory + optional fields, log failures to `logs/error_log.txt`
 2. **Ingest** — store in SQLite with normalized tables; unique constraint on `message_id`
 3. **Dedupe** — scan DB, group by `from_address` + normalized subject + body similarity ≥ 90%; flag `is_duplicate=true`, set `duplicate_of`; write `duplicates_report.csv`
 4. **Notify** — for each flagged duplicate, send notification to original sender via Gmail MCP; log to `output/send_log.csv`
+
+### Notification Email (sample)
+
+![Duplicate notification email](asset/notification_email.png)
+
+### Inbox After Pipeline Run
+
+![Gmail inbox showing bulk duplicate notifications](asset/notification_inbox.png)
 
 ## Quick Start
 
@@ -97,4 +107,28 @@ python main.py --send-live
 
 ## MCP Setup
 
-See `mcp_config.json.example` for configuration structure. Full setup instructions in `AI_USAGE.md` under the MCP Integration section.
+The pipeline spawns `gmail_mcp_server.py` as a subprocess directly — no Claude Code MCP config needed. The only setup required is `.env`.
+
+### 1. Generate a Gmail App Password
+
+1. Go to [myaccount.google.com/security](https://myaccount.google.com/security) and enable **2-Step Verification** if not already on.
+2. Go to [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords).
+3. Under "Select app" choose **Mail**; under "Select device" choose **Other** and type a name (e.g. `enron-pipeline`).
+4. Click **Generate** — copy the 16-character password (shown once).
+
+### 2. Create `.env`
+
+```bash
+cp env.example .env
+```
+
+Edit `.env`:
+
+```
+GMAIL_ADDRESS=you@gmail.com
+GMAIL_APP_PASSWORD=abcd efgh ijkl mnop
+```
+
+> `.env` is in `.gitignore` and will not be committed.
+
+`mcp_config.json.example` is included for anyone who wants to register the Gmail server with Claude Code interactively, but it is not required to run the pipeline.

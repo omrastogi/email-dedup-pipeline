@@ -1,4 +1,5 @@
 .env
+mcp_config.json
 *.db
 __pycache__/
 *.pyc
